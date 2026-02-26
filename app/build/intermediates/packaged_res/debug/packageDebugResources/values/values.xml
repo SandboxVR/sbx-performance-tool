@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#323c5a</color>
+    <color name="sbx_accent">#1986F2</color>
+    <color name="sbx_accent_dim">#125FAE</color>
+    <color name="sbx_bg_bottom">#07101D</color>
+    <color name="sbx_bg_top">#03060D</color>
+    <color name="sbx_chip_bg">#13233A</color>
+    <color name="sbx_chip_internal_bg">#1AFFFFFF</color>
+    <color name="sbx_ink">#0B0F14</color>
+    <color name="sbx_panel">#54101A2B</color>
+    <color name="sbx_panel_alt_edge">#1FFFFFFF</color>
+    <color name="sbx_panel_edge">#2250A8FF</color>
+    <color name="sbx_text_muted">#7F8A9D</color>
+    <color name="sbx_text_primary">#F4F7FB</color>
+    <color name="sbx_text_secondary">#B7C0CF</color>
+    <string name="app_name">SBX Diagnostic Server</string>
+    <string name="brand_wordmark">SandboxVR</string>
+    <string name="control_label">Controls</string>
+    <string name="endpoint_label">HTTP Endpoint</string>
+    <string name="header_badge">SandboxVR / Internal Tools</string>
+    <string name="internal_use_only">Internal Use Only</string>
+    <string name="intro_text">Run diagnostic services for on-site troubleshooting and collect endpoint data from this headset.</string>
+    <string name="notification_channel_name">Diagnostics Background Service</string>
+    <string name="notification_text">HTTP API is available on port 9124 while the app runs in foreground service mode.</string>
+    <string name="notification_title">SBX Diagnostic Server Running</string>
+    <string name="refresh">Refresh Info</string>
+    <string name="start_service">Start Background Service</string>
+    <string name="status_label">Service Status</string>
+    <string name="status_running_hint">Status: background service running</string>
+    <string name="status_stopped_hint">Status: service stopped</string>
+    <string name="stop_service">Stop Background Service</string>
+    <style name="Theme.Diag2d" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/sbx_accent</item>
+        <item name="colorPrimaryVariant">@color/sbx_accent_dim</item>
+        <item name="colorSecondary">@color/sbx_accent</item>
+        <item name="colorOnPrimary">@color/sbx_ink</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/sbx_bg_bottom</item>
+    </style>
+</resources>

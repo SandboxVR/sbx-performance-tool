@@ -1,0 +1,138 @@
+[
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-ldpi_ic_launcher_round.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-ldpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-ldpi_ic_launcher.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-ldpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_icon_disc.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/icon_disc.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_chip_internal.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/chip_internal.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_button_secondary.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/button_secondary.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xxxhdpi_ic_launcher_foreground.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xxxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_button_primary.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/button_primary.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/layout_activity_main.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_panel_hero.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/panel_hero.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_chip_status_stopped.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/chip_status_stopped.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_chip_accent.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/chip_accent.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-hdpi_ic_launcher_foreground.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-hdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_panel_endpoint.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/panel_endpoint.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_chip_status_running.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/chip_status_running.xml"
+    },
+    {
+        "merged": "com.sandboxvr.perform2.app-debug-31:/layout_activity_main.xml.flat",
+        "source": "com.sandboxvr.perform2.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xhdpi_ic_launcher_foreground.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-mdpi_ic_launcher_foreground.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-mdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_bg_app_surface.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/bg_app_surface.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_chip_status.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/chip_status.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_panel_card.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/panel_card.xml"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-debug-31:/drawable_button_ghost.xml.flat",
+        "source": "/Users/kevin/.gradle/daemon/9.0-milestone-1/com.sandboxvr.perform2.app-main-33:/drawable/button_ghost.xml"
+    }
+]

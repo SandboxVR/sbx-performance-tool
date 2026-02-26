@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sbx_bg_top">#03060D</color>
+    <color name="sbx_bg_bottom">#07101D</color>
+    <color name="sbx_panel">#54101A2B</color>
+    <color name="sbx_panel_edge">#2250A8FF</color>
+    <color name="sbx_panel_alt_edge">#1FFFFFFF</color>
+    <color name="sbx_accent">#1986F2</color>
+    <color name="sbx_accent_dim">#125FAE</color>
+    <color name="sbx_text_primary">#F4F7FB</color>
+    <color name="sbx_text_secondary">#B7C0CF</color>
+    <color name="sbx_text_muted">#7F8A9D</color>
+    <color name="sbx_ink">#0B0F14</color>
+    <color name="sbx_chip_bg">#13233A</color>
+    <color name="sbx_chip_internal_bg">#1AFFFFFF</color>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SBX Diagnostic Server</string>
+    <string name="brand_wordmark">SandboxVR</string>
+    <string name="header_badge">SandboxVR / Internal Tools</string>
+    <string name="intro_text">Run diagnostic services for on-site troubleshooting and collect endpoint data from this headset.</string>
+    <string name="status_label">Service Status</string>
+    <string name="control_label">Controls</string>
+    <string name="endpoint_label">HTTP Endpoint</string>
+    <string name="start_service">Start Background Service</string>
+    <string name="stop_service">Stop Background Service</string>
+    <string name="refresh">Refresh Info</string>
+    <string name="status_running_hint">Status: background service running</string>
+    <string name="status_stopped_hint">Status: service stopped</string>
+    <string name="notification_channel_name">Diagnostics Background Service</string>
+    <string name="notification_title">SBX Diagnostic Server Running</string>
+    <string name="notification_text">HTTP API is available on port 9124 while the app runs in foreground service mode.</string>
+    <string name="internal_use_only">Internal Use Only</string>
+</resources>

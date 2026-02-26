@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Diag2d" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/sbx_accent</item>
+        <item name="colorPrimaryVariant">@color/sbx_accent_dim</item>
+        <item name="colorSecondary">@color/sbx_accent</item>
+        <item name="colorOnPrimary">@color/sbx_ink</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/sbx_bg_bottom</item>
+    </style>
+</resources>

@@ -1,0 +1,19 @@
+<lint-module
+    format="1"
+    dir="/Users/kevin/Documents/GitHub/sbx-performance-tool/app"
+    name=":app"
+    type="APP"
+    maven="sbx-performance-tool:app:unspecified"
+    agpVersion="8.13.2"
+    buildFolder="build"
+    bootClassPath="/Users/kevin/Library/Android/sdk/platforms/android-34/android.jar:/Users/kevin/Library/Android/sdk/build-tools/35.0.0/core-lambda-stubs.jar"
+    javaSourceLevel="11"
+    compileTarget="android-34"
+    neverShrinking="true">
+  <lintOptions
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="release"/>
+</lint-module>
