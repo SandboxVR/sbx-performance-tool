@@ -15,3 +15,5 @@ This standalone project includes stub classes under:
 
 - `app/src/main/java/com/htc/customizedlib/`
   
+SHA-1 certificate fingerprint
+02:3F:E4:80:4C:BC:DA:69:38:A9:5F:0F:89:B6:54:60:A9:B3:C7:7C
