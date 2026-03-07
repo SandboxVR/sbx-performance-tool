@@ -33,22 +33,27 @@ param(
     [string]$ResponderAddress = "",
     [int]$ResponderPort = 9123,
     [int]$HeadsetHttpPort = 9124,
-    [int]$DurationMs = 300000,
-    [int]$RateHz = 50,
-    [int]$PayloadBytes = 1400,
+    [int]$DurationMs = 60000,
+    [int]$RateHz = 100,
+    [int]$PayloadBytes = 256,
     [ValidateSet("rtt", "throughput", "rx")]
-    [string]$Mode = "rx",
+    [string]$Mode = "rtt",
     [double]$TargetMbps = 45.0
 )
 
 function Get-LocalIPv4 {
-    $ip = Get-NetIPAddress -AddressFamily IPv4 |
-        Where-Object { $_.IPAddress -notlike "169.254.*" -and $_.IPAddress -ne "127.0.0.1" } |
+    Get-NetIPAddress -AddressFamily IPv4 |
+        Where-Object {
+            $_.IPAddress -notlike "169.254.*" -and
+            $_.IPAddress -ne "127.0.0.1" -and
+            $_.PrefixOrigin -ne "WellKnown"
+        } |
+        Sort-Object InterfaceMetric |
         Select-Object -First 1 -ExpandProperty IPAddress
-    return $ip
 }
 
 $needsResponder = ($Mode -ne "rx")
+
 if ($needsResponder -and [string]::IsNullOrWhiteSpace($ResponderAddress)) {
     $ResponderAddress = Get-LocalIPv4
 }
@@ -57,90 +62,129 @@ if ($needsResponder -and [string]::IsNullOrWhiteSpace($ResponderAddress)) {
 }
 
 $echoJob = $null
-if ($needsResponder) {
-    $echoJob = Start-Job -ScriptBlock {
-        param($BindAddress, $Port, $ShouldEcho)
-        $endpoint = New-Object System.Net.IPEndPoint ([System.Net.IPAddress]::Parse($BindAddress)) $Port
-        $udp = New-Object System.Net.Sockets.UdpClient
-        $udp.Client.Bind($endpoint)
-        try {
-            while ($true) {
-                $remote = New-Object System.Net.IPEndPoint ([System.Net.IPAddress]::Any) 0
-                $data = $udp.Receive([ref]$remote)
-                if ($ShouldEcho) { [void]$udp.Send($data, $data.Length, $remote) }
-            }
-        } finally { $udp.Close() }
-    } -ArgumentList $ResponderAddress, $ResponderPort, ($Mode -eq "rtt")
-
-    Start-Sleep -Milliseconds 250
-}
-
-$expectedPackets = -1
-if ($Mode -eq "rx" -and $PayloadBytes -gt 0 -and $TargetMbps -gt 0) {
-    $bytesPerSecond = ($TargetMbps * 1000000) / 8
-    $expectedPackets = [int][Math]::Floor(($bytesPerSecond * ($DurationMs / 1000.0)) / $PayloadBytes)
-}
-
-$startUrl  = "http://$HeadsetAddress`:$HeadsetHttpPort/start-test?port=$ResponderPort&duration_ms=$DurationMs&rate_hz=$RateHz&payload_bytes=$PayloadBytes&mode=$Mode&target_mbps=$TargetMbps&expected_packets=$expectedPackets"
-if ($needsResponder) { $startUrl += "&target=$ResponderAddress" }
-$resultUrl = "http://$HeadsetAddress`:$HeadsetHttpPort/get-results"
-
 try {
-    Invoke-WebRequest -UseBasicParsing -Uri $startUrl | Out-Null
-} catch {
-    if ($echoJob) { Stop-Job $echoJob | Out-Null; Remove-Job $echoJob | Out-Null }
-    throw
-}
+    if ($needsResponder) {
+        $echoJob = Start-Job -ScriptBlock {
+            param($Port, $ShouldEcho)
 
-if ($Mode -eq "rx") {
-    $udp = New-Object System.Net.Sockets.UdpClient
-    $ip = $null
-    if ([System.Net.IPAddress]::TryParse($HeadsetAddress, [ref]$ip) -eq $false) {
-        $resolved = [System.Net.Dns]::GetHostAddresses($HeadsetAddress) |
-            Where-Object { $_.AddressFamily -eq "InterNetwork" } |
-            Select-Object -First 1
-        if ($null -eq $resolved) { throw "Failed to resolve HeadsetAddress $HeadsetAddress" }
-        $ip = $resolved
+            $udp = $null
+            try {
+                $udp = New-Object System.Net.Sockets.UdpClient($Port)
+                $udp.Client.ReceiveTimeout = 1000
+                Write-Output "Responder listening on UDP $Port"
+
+                while ($true) {
+                    try {
+                        $remote = New-Object System.Net.IPEndPoint ([System.Net.IPAddress]::Any, 0)
+                        $data = $udp.Receive([ref]$remote)
+                        if ($ShouldEcho) {
+                            [void]$udp.Send($data, $data.Length, $remote)
+                        }
+                    } catch [System.Management.Automation.StopUpstreamCommandsException] {
+                        break
+                    } catch [System.Net.Sockets.SocketException] {
+                        # timeout or socket closed; continue until stopped
+                        continue
+                    } catch {
+                        Write-Output "Responder error: $($_.Exception.Message)"
+                        break
+                    }
+                }
+            } finally {
+                if ($udp) { $udp.Close() }
+            }
+        } -ArgumentList $ResponderPort, ($Mode -eq "rtt")
+
+        Start-Sleep -Milliseconds 500
     }
-    $target  = New-Object System.Net.IPEndPoint $ip, $ResponderPort
-    $payload = New-Object byte[] $PayloadBytes
-    $bytesPerNs = ($TargetMbps * 1000000 / 8) / 1000000000
 
-    $startTicks = [System.Diagnostics.Stopwatch]::GetTimestamp()
-    $freq = [System.Diagnostics.Stopwatch]::Frequency
-    $endTicks = $startTicks + ($DurationMs / 1000.0) * $freq
+    $expectedPackets = -1
+    if ($Mode -eq "rx" -and $PayloadBytes -gt 0 -and $TargetMbps -gt 0) {
+        $bytesPerSecond = ($TargetMbps * 1000000) / 8
+        $expectedPackets = [int][Math]::Floor(($bytesPerSecond * ($DurationMs / 1000.0)) / $PayloadBytes)
+    }
 
-    $sentBytes = 0
-    $seq = 0
-    while ([System.Diagnostics.Stopwatch]::GetTimestamp() -lt $endTicks) {
-        $nowTicks = [System.Diagnostics.Stopwatch]::GetTimestamp()
-        $elapsedNs = (($nowTicks - $startTicks) / $freq) * 1000000000
-        $budget = [int64]($elapsedNs * $bytesPerNs) - $sentBytes
-        while ($budget -ge $PayloadBytes) {
-            [byte[]]$seqBytes = [System.BitConverter]::GetBytes([Int64]$seq)
-            if (-not [System.BitConverter]::IsLittleEndian) { [Array]::Reverse($seqBytes) }
-            [Array]::Copy($seqBytes, 0, $payload, 0, [Math]::Min(8, $payload.Length))
-            [void]$udp.Send($payload, $payload.Length, $target)
-            $sentBytes += $PayloadBytes
-            $seq++
-            $budget -= $PayloadBytes
+    $startUrl = "http://$HeadsetAddress`:$HeadsetHttpPort/start-test?port=$ResponderPort&duration_ms=$DurationMs&rate_hz=$RateHz&payload_bytes=$PayloadBytes&mode=$Mode&target_mbps=$TargetMbps&expected_packets=$expectedPackets"
+    if ($needsResponder) {
+        $startUrl += "&target=$ResponderAddress"
+    }
+
+    $resultUrl = "http://$HeadsetAddress`:$HeadsetHttpPort/get-results"
+    $stopUrl   = "http://$HeadsetAddress`:$HeadsetHttpPort/stop-test"
+
+    Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 -Uri $startUrl | Out-Null
+
+    if ($Mode -eq "rx") {
+        $udp = New-Object System.Net.Sockets.UdpClient
+        try {
+            $ip = $null
+            if (-not [System.Net.IPAddress]::TryParse($HeadsetAddress, [ref]$ip)) {
+                $resolved = [System.Net.Dns]::GetHostAddresses($HeadsetAddress) |
+                    Where-Object { $_.AddressFamily -eq "InterNetwork" } |
+                    Select-Object -First 1
+                if ($null -eq $resolved) {
+                    throw "Failed to resolve HeadsetAddress $HeadsetAddress"
+                }
+                $ip = $resolved
+            }
+
+            $target  = New-Object System.Net.IPEndPoint $ip, $ResponderPort
+            $payload = New-Object byte[] $PayloadBytes
+            $bytesPerNs = ($TargetMbps * 1000000 / 8) / 1000000000
+
+            $startTicks = [System.Diagnostics.Stopwatch]::GetTimestamp()
+            $freq = [System.Diagnostics.Stopwatch]::Frequency
+            $endTicks = $startTicks + ($DurationMs / 1000.0) * $freq
+
+            $sentBytes = 0
+            $seq = 0
+            while ([System.Diagnostics.Stopwatch]::GetTimestamp() -lt $endTicks) {
+                $nowTicks = [System.Diagnostics.Stopwatch]::GetTimestamp()
+                $elapsedNs = (($nowTicks - $startTicks) / $freq) * 1000000000
+                $budget = [int64]($elapsedNs * $bytesPerNs) - $sentBytes
+                while ($budget -ge $PayloadBytes) {
+                    [byte[]]$seqBytes = [System.BitConverter]::GetBytes([Int64]$seq)
+                    if (-not [System.BitConverter]::IsLittleEndian) { [Array]::Reverse($seqBytes) }
+                    [Array]::Copy($seqBytes, 0, $payload, 0, [Math]::Min(8, $payload.Length))
+                    [void]$udp.Send($payload, $payload.Length, $target)
+                    $sentBytes += $PayloadBytes
+                    $seq++
+                    $budget -= $PayloadBytes
+                }
+            }
+        } finally {
+            $udp.Close()
         }
     }
-    $udp.Close()
+
+    $status = "RUNNING"
+    $json = $null
+    $deadline = (Get-Date).AddMilliseconds($DurationMs + 15000)
+
+    while ($status -eq "RUNNING" -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 500
+        try {
+            $json = Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 -Uri $resultUrl
+            $data = $json.Content | ConvertFrom-Json
+            $status = $data.status
+        } catch {
+            # keep polling until deadline
+        }
+    }
+
+    if ($status -eq "RUNNING") {
+        try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 -Uri $stopUrl | Out-Null } catch {}
+        throw "Timed out waiting for test result from $HeadsetAddress"
+    }
+
+    $json.Content
 }
-
-$status = "RUNNING"
-$json = $null
-while ($status -eq "RUNNING") {
-    Start-Sleep -Seconds 1
-    $json = Invoke-WebRequest -UseBasicParsing -Uri $resultUrl
-    $data = $json.Content | ConvertFrom-Json
-    $status = $data.status
+finally {
+    if ($echoJob) {
+        try { Stop-Job -Job $echoJob -Force | Out-Null } catch {}
+        try { Remove-Job -Job $echoJob -Force | Out-Null } catch {}
+    }
 }
-
-if ($echoJob) { Stop-Job $echoJob | Out-Null; Remove-Job $echoJob | Out-Null }
-
-$json.Content
 }
 
 $jobs = @()
@@ -153,27 +197,29 @@ for ($i = 0; $i -lt $ipList.Count; $i++) {
         -Credential $cred `
         -ScriptBlock $scriptBlock `
         -ArgumentList @(
-            $headIP,        # HeadsetAddress (mandatory)
-            "",             # ResponderAddress (blank; rx mode doesn't need it)
-            9123,           # ResponderPort
-            9124,           # HeadsetHttpPort
-            1800000,        # DurationMs
-            50,             # RateHz (unused in rx, but kept)
-            1400,           # PayloadBytes
-            "rx",           # Mode
-            25.0            # TargetMbps
+            $headIP,
+            $pc,
+            9123,
+            9124,
+            300000,  # DurationMs
+            100,    # RateHz
+            1400,    # PayloadBytes
+            "rtt",
+            45.0
         ) `
         -JobName ("udp-test-{0}-{1}" -f $pc, $headIP)
 }
 
-Wait-Job -Job $jobs | Out-Null
+# Do not wait forever
+$null = Wait-Job -Job $jobs -Timeout 120
 
 $results = foreach ($j in $jobs) {
-    $out = Receive-Job -Job $j -Keep
+    $out = Receive-Job -Job $j -Keep -ErrorAction SilentlyContinue
     [pscustomobject]@{
-        JobName     = $j.Name
-        Computer    = $j.Location
-        OutputRaw   = $out
+        JobName   = $j.Name
+        Computer  = $j.Location
+        State     = $j.State
+        OutputRaw = $out
     }
 }
 
@@ -181,25 +227,63 @@ $parsed = foreach ($r in $results) {
     foreach ($line in $r.OutputRaw) {
         try {
             $obj = $line | ConvertFrom-Json
-            [pscustomobject]@{
-                Computer          = $r.Computer
-                JobName           = $r.JobName
-                payload_bytes     = $obj.payload_bytes
-                loss_pct          = $obj.loss_pct
-                received_mbps     = $obj.received_mbps
-                received_packets  = $obj.received_packets
-                expected_packets  = $obj.expected_packets
-                duration_ms       = $obj.duration_ms
-                timestamp         = $obj.timestamp
+
+            if ($obj.mode -eq "rtt") {
+                [pscustomobject]@{
+                    Computer       = $r.Computer
+                    JobName        = $r.JobName
+                    State          = $r.State
+                    mode           = $obj.mode
+                    payload_bytes  = $obj.payload_bytes
+                    sent           = $obj.sent
+                    received       = $obj.received
+                    loss_pct       = $obj.loss_pct
+                    rtt_avg_ms     = $obj.rtt_avg_ms
+                    rtt_p95_ms     = $obj.rtt_p95_ms
+                    rtt_p99_ms     = $obj.rtt_p99_ms
+                    jitter_p95_ms  = $obj.jitter_p95_ms
+                    duration_ms    = $obj.duration_ms
+                    timestamp      = $obj.timestamp
+                }
+            }
+            elseif ($obj.mode -eq "rx") {
+                [pscustomobject]@{
+                    Computer          = $r.Computer
+                    JobName           = $r.JobName
+                    State             = $r.State
+                    mode              = $obj.mode
+                    payload_bytes     = $obj.payload_bytes
+                    loss_pct          = $obj.loss_pct
+                    received_mbps     = $obj.received_mbps
+                    received_packets  = $obj.received_packets
+                    expected_packets  = $obj.expected_packets
+                    duration_ms       = $obj.duration_ms
+                    timestamp         = $obj.timestamp
+                }
+            }
+            else {
+                [pscustomobject]@{
+                    Computer = $r.Computer
+                    JobName  = $r.JobName
+                    State    = $r.State
+                    Note     = $line
+                }
             }
         } catch {
-            [pscustomobject]@{ Computer=$r.Computer; JobName=$r.JobName; Note=$line }
+            [pscustomobject]@{
+                Computer = $r.Computer
+                JobName  = $r.JobName
+                State    = $r.State
+                Note     = $line
+            }
         }
     }
 }
 
 $parsed | Sort-Object Computer | Format-Table -AutoSize
 
-# Cleanup
-Remove-Job -Job $jobs
- 
+# Cleanup outer jobs
+$jobs | ForEach-Object {
+    try { Stop-Job -Job $_ -Force | Out-Null } catch {}
+    try { Remove-Job -Job $_ -Force | Out-Null } catch {}
+}
