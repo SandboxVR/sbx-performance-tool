@@ -5,13 +5,20 @@ plugins {
 android {
     namespace 'com.sandboxvr.perform2'
     compileSdk 34
+    ndkVersion "25.2.9519653"
 
     defaultConfig {
         applicationId "com.sandboxvr.perform2"
         minSdk 29
         targetSdk 33
-        versionCode 6
-        versionName "1.2"
+        versionCode 8
+        versionName "1.2.1.1"
+
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+            }
+        }
     }
 
     buildTypes {
@@ -24,6 +31,12 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+        }
     }
 }
 
