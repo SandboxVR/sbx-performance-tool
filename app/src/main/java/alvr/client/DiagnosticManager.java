@@ -49,8 +49,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
-
-
 public final class DiagnosticManager {
     private static final String TAG = "DiagnosticManager";
     private static final int UDP_PORT = 9123;
@@ -79,23 +77,21 @@ public final class DiagnosticManager {
     private static ExecutorService testExecutor = Executors.newCachedThreadPool();
     private static final ConcurrentHashMap<String, NetworkTestState> tests = new ConcurrentHashMap<>();
 
-    private static final int DEFAULT_LEAK_CHUNK_KB = 256;
+    private static final int DEFAULT_LEAK_CHUNK_KB = 4;
     private static final int DEFAULT_LEAK_INTERVAL_MS = 250;
     private static final int DEFAULT_LEAK_MAX_MB = 256;
-    private static final int MAX_LEAK_MAX_MB = 512;
+    private static final int MAX_LEAK_MAX_MB = 9999;
 
     private static final Object LEAK_LOCK = new Object();
-    private static final List<Object> leakedAllocations = new ArrayList<>();
     private static Thread leakThread;
     private static volatile boolean leakRunning = false;
     private static volatile long leakAllocatedBytes = 0L;
     private static volatile int leakChunkCount = 0;
-    private static volatile String leakMode = "direct";
+    private static volatile String leakMode = "jni";
     private static volatile int leakChunkBytes = DEFAULT_LEAK_CHUNK_KB * 1024;
     private static volatile int leakIntervalMs = DEFAULT_LEAK_INTERVAL_MS;
     private static volatile long leakMaxBytes = DEFAULT_LEAK_MAX_MB * 1024L * 1024L;
     private static volatile String leakLastError = "";
-
 
     private DiagnosticManager() {
     }
@@ -126,7 +122,6 @@ public final class DiagnosticManager {
         }
     }
 
-
     public static void stop() {
         synchronized (LOCK) {
             stopHttpServer();
@@ -137,7 +132,6 @@ public final class DiagnosticManager {
             appContext = null;
         }
     }
-
 
     private static void startHttpServer() {
         if (clientExecutor == null || clientExecutor.isShutdown()) {
@@ -343,8 +337,7 @@ public final class DiagnosticManager {
                 sendResponse(socket, "200 OK", getMemoryLeakStatusJson(), "application/json");
             } else if ("/get-memory-leak-status".equals(request.path)) {
                 sendResponse(socket, "200 OK", getMemoryLeakStatusJson(), "application/json");
-            }
-            else {
+            } else {
                 sendResponse(socket, "404 Not Found",
                         "Endpoints: /start-test?test_id=..., /get-results?test_id=..., /stop-test?test_id=..., /list-tests, /start-memory-leak, /stop-memory-leak, /get-memory-leak-status, /stop-all-tests, /get-hardware-stats, /get-wifi-stats, /scan-wifi, /reboot, /battery, /check-firmware, /forget-wifi, /ipd/get, /ipd/set, /ipd/auto, /ipd/auto-ui, /ipd/auto-info, /customized-status, /query-wifi-status-raw, /shutdown-app",
                         "text/plain");
@@ -506,117 +499,110 @@ public final class DiagnosticManager {
     }
 
     private static String startMemoryLeakJson(Map<String, String> queryParams) {
-    synchronized (LEAK_LOCK) {
-        if (leakRunning) {
-            return getMemoryLeakStatusJson();
+        synchronized (LEAK_LOCK) {
+            if (leakRunning) {
+                return getMemoryLeakStatusJson();
+            }
+
+            int requestedChunkKb = getQueryInt(queryParams, "chunk_kb", DEFAULT_LEAK_CHUNK_KB);
+            int requestedIntervalMs = getQueryInt(queryParams, "interval_ms", DEFAULT_LEAK_INTERVAL_MS);
+            int requestedMaxMb = getQueryInt(queryParams, "max_mb", DEFAULT_LEAK_MAX_MB);
+
+            leakMode = "jni";
+            leakChunkBytes = Math.max(256, requestedChunkKb * 1024);
+            leakIntervalMs = Math.max(10, requestedIntervalMs);
+            leakMaxBytes = Math.max(1L, Math.min(MAX_LEAK_MAX_MB, requestedMaxMb)) * 1024L * 1024L;
+            leakAllocatedBytes = 0L;
+            leakChunkCount = 0;
+            leakLastError = "";
+            leakRunning = true;
+
+            final String payload = buildLeakPayload(leakChunkBytes);
+
+            leakThread = new Thread(() -> {
+                try {
+                    while (leakRunning && !Thread.currentThread().isInterrupted()) {
+                        if (leakAllocatedBytes >= leakMaxBytes) {
+                            leakRunning = false;
+                            break;
+                        }
+
+                        JniLeakBridge.nativeLeakString(payload);
+
+                        synchronized (LEAK_LOCK) {
+                            leakAllocatedBytes += payload.getBytes(StandardCharsets.UTF_8).length;
+                            leakChunkCount += 1;
+                        }
+
+                        Thread.sleep(leakIntervalMs);
+                    }
+                } catch (OutOfMemoryError oom) {
+                    leakLastError = "OutOfMemoryError: " +
+                            (oom.getMessage() == null ? "allocation failed" : oom.getMessage());
+                    leakRunning = false;
+                } catch (InterruptedException ignored) {
+                    Thread.currentThread().interrupt();
+                } catch (Throwable t) {
+                    leakLastError = describeThrowable(t);
+                    leakRunning = false;
+                }
+            }, "DiagnosticJniLeak");
+            leakThread.start();
         }
 
-        String requestedMode = trimToNull(getQueryParam(queryParams, "mode"));
-        int requestedChunkKb = getQueryInt(queryParams, "chunk_kb", DEFAULT_LEAK_CHUNK_KB);
-        int requestedIntervalMs = getQueryInt(queryParams, "interval_ms", DEFAULT_LEAK_INTERVAL_MS);
-        int requestedMaxMb = getQueryInt(queryParams, "max_mb", DEFAULT_LEAK_MAX_MB);
+        return getMemoryLeakStatusJson();
+    }
 
-        leakMode = "heap".equalsIgnoreCase(requestedMode) ? "heap" : "direct";
-        leakChunkBytes = Math.max(4 * 1024, requestedChunkKb * 1024);
-        leakIntervalMs = Math.max(10, requestedIntervalMs);
-        leakMaxBytes = Math.max(1L, Math.min(MAX_LEAK_MAX_MB, requestedMaxMb)) * 1024L * 1024L;
-        leakAllocatedBytes = 0L;
-        leakChunkCount = 0;
-        leakLastError = "";
-        leakedAllocations.clear();
-        leakRunning = true;
+    private static void stopMemoryLeak() {
+        Thread threadToJoin;
+        synchronized (LEAK_LOCK) {
+            leakRunning = false;
+            threadToJoin = leakThread;
+            leakThread = null;
+        }
 
-        leakThread = new Thread(() -> {
+        if (threadToJoin != null) {
+            threadToJoin.interrupt();
             try {
-                while (leakRunning && !Thread.currentThread().isInterrupted()) {
-                    if (leakAllocatedBytes >= leakMaxBytes) {
-                        leakRunning = false;
-                        break;
-                    }
-
-                    Object allocation;
-                    if ("heap".equals(leakMode)) {
-                        byte[] bytes = new byte[leakChunkBytes];
-                        bytes[0] = 1;
-                        bytes[bytes.length - 1] = 1;
-                        allocation = bytes;
-                    } else {
-                        ByteBuffer buffer = ByteBuffer.allocateDirect(leakChunkBytes);
-                        buffer.put(0, (byte) 1);
-                        buffer.put(leakChunkBytes - 1, (byte) 1);
-                        allocation = buffer;
-                    }
-
-                    synchronized (LEAK_LOCK) {
-                        leakedAllocations.add(allocation);
-                        leakAllocatedBytes += leakChunkBytes;
-                        leakChunkCount += 1;
-                    }
-
-                    Thread.sleep(leakIntervalMs);
-                }
-            } catch (OutOfMemoryError oom) {
-                leakLastError = "OutOfMemoryError: " +
-                        (oom.getMessage() == null ? "allocation failed" : oom.getMessage());
-                leakRunning = false;
+                threadToJoin.join(500);
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
-            } catch (Throwable t) {
-                leakLastError = describeThrowable(t);
-                leakRunning = false;
             }
-        }, "DiagnosticMemoryLeak");
-        leakThread.start();
-    }
-
-    return getMemoryLeakStatusJson();
-}
-
-private static void stopMemoryLeak() {
-    Thread threadToJoin;
-    synchronized (LEAK_LOCK) {
-        leakRunning = false;
-        threadToJoin = leakThread;
-        leakThread = null;
-    }
-
-    if (threadToJoin != null) {
-        threadToJoin.interrupt();
-        try {
-            threadToJoin.join(500);
-        } catch (InterruptedException ignored) {
-            Thread.currentThread().interrupt();
         }
+
+        synchronized (LEAK_LOCK) {
+            leakAllocatedBytes = 0L;
+            leakChunkCount = 0;
+        }
+
+        System.gc();
     }
 
-    synchronized (LEAK_LOCK) {
-        leakedAllocations.clear();
-        leakAllocatedBytes = 0L;
-        leakChunkCount = 0;
+    private static String getMemoryLeakStatusJson() {
+        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
+        synchronized (LEAK_LOCK) {
+            payload.put("status", "OK");
+            payload.put("running", leakRunning);
+            payload.put("mode", leakMode);
+            payload.put("chunk_bytes", leakChunkBytes);
+            payload.put("interval_ms", leakIntervalMs);
+            payload.put("allocated_bytes", leakAllocatedBytes);
+            payload.put("allocated_mb", roundTo2(leakAllocatedBytes / (1024.0 * 1024.0)));
+            payload.put("chunk_count", leakChunkCount);
+            payload.put("max_bytes", leakMaxBytes);
+            payload.put("max_mb", roundTo2(leakMaxBytes / (1024.0 * 1024.0)));
+            payload.put("last_error", leakLastError);
+            payload.put("timestamp", System.currentTimeMillis());
+        }
+        return GSON.toJson(payload);
     }
 
-    System.gc();
-}
-
-private static String getMemoryLeakStatusJson() {
-    LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-    synchronized (LEAK_LOCK) {
-        payload.put("status", "OK");
-        payload.put("running", leakRunning);
-        payload.put("mode", leakMode);
-        payload.put("chunk_bytes", leakChunkBytes);
-        payload.put("interval_ms", leakIntervalMs);
-        payload.put("allocated_bytes", leakAllocatedBytes);
-        payload.put("allocated_mb", roundTo2(leakAllocatedBytes / (1024.0 * 1024.0)));
-        payload.put("chunk_count", leakChunkCount);
-        payload.put("max_bytes", leakMaxBytes);
-        payload.put("max_mb", roundTo2(leakMaxBytes / (1024.0 * 1024.0)));
-        payload.put("last_error", leakLastError);
-        payload.put("timestamp", System.currentTimeMillis());
+    private static String buildLeakPayload(int targetBytes) {
+        int charCount = Math.max(1, targetBytes);
+        char[] chars = new char[charCount];
+        Arrays.fill(chars, 'L');
+        return new String(chars);
     }
-    return GSON.toJson(payload);
-}
-
 
     private static void sendResponse(Socket socket, String status, String body, String contentType) {
         try {
@@ -1080,7 +1066,7 @@ private static String getMemoryLeakStatusJson() {
                     "  \"status\": \"ERROR\",\n" +
                     "  \"message\": \"CustomizedService not connected\",\n" +
                     "  \"timestamp\": " + now + "\n" +
-                "}";
+                    "}";
         }
         FirmwareResult firmware = fetchFirmwareInfo();
         String status = firmware.ok ? "OK" : "ERROR";
@@ -1455,9 +1441,9 @@ private static String getMemoryLeakStatusJson() {
     }
 
     private static class WifiStatusRawResponse {
-        String status; // OK or ERROR
-        String message; // for errors
-        String error; // for errors
+        String status;
+        String message;
+        String error;
         String raw;
         long timestamp;
     }
@@ -1728,7 +1714,6 @@ private static String getMemoryLeakStatusJson() {
             return "{\"raw\":\"" + jsonEscape(raw) + "\"}";
         }
     }
-
 
     private static double readCpuUsagePercent() {
         try {
@@ -2583,7 +2568,6 @@ private static String getMemoryLeakStatusJson() {
         int frequencyMhz = -1;
     }
 
-
     private static class ThermalStats {
         int status = -1;
     }
@@ -2596,7 +2580,6 @@ private static String getMemoryLeakStatusJson() {
     private static double lastCpuPercent = -1.0;
     private static long lastProcCpuMs = 0;
     private static long lastProcWallMs = 0;
-
 
     private static class ReceiveResult {
         long receivedBytes;
