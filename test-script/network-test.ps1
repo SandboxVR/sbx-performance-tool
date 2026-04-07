@@ -5,6 +5,9 @@ $TestMode = "rx"
 $TestTargetMbps = 45
 $DefaultTestPort = 9123
 $HeadsetHttpPort = 9124
+$EnableRxWarmup = $true
+$RxWarmupDurationMs = 2000
+$RxWarmupSettleMs = 300
 
 $RunCount = 1
 $OutputDir = "C:\temp\network-test-runs"
@@ -120,7 +123,10 @@ param(
     [string]$HeadsetAddress,
     [string]$ResponderAddress = "",
     [int]$HeadsetHttpPort = 9124,
-    [object[]]$TestProfiles
+    [object[]]$TestProfiles,
+    [bool]$EnableRxWarmup = $true,
+    [int]$RxWarmupDurationMs = 2000,
+    [int]$RxWarmupSettleMs = 300
 )
 
 function Get-LocalIPv4 {
@@ -421,6 +427,80 @@ function Stop-AllRemoteTests {
     }
 }
 
+function Invoke-RxWarmup {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Profiles,
+        [string]$HeadsetAddress,
+        [int]$HeadsetHttpPort,
+        [int]$DurationMs,
+        [int]$SettleMs
+    )
+
+    if ($DurationMs -le 0) {
+        return
+    }
+
+    $rxProfiles = @($Profiles | Where-Object { $_.Mode -eq "rx" })
+    if ($rxProfiles.Count -eq 0) {
+        return
+    }
+
+    $safeSettleMs = [Math]::Max(0,$SettleMs)
+
+    foreach ($profile in $rxProfiles) {
+        $warmupTestId = New-TestId -ProfileName ("warmup-{0}" -f $profile.Name) -Mode $profile.Mode -Port $profile.Port
+        $expectedPackets = [int][Math]::Floor(((($profile.TargetMbps * 1000000) / 8) * ($DurationMs / 1000.0)) / $profile.PayloadBytes)
+        if ($expectedPackets -lt 1) {
+            $expectedPackets = 1
+        }
+
+        $query = [ordered]@{
+            test_id = $warmupTestId
+            port = $profile.Port
+            duration_ms = $DurationMs
+            rate_hz = $profile.RateHz
+            payload_bytes = $profile.PayloadBytes
+            mode = $profile.Mode
+            target_mbps = $profile.TargetMbps
+            expected_packets = $expectedPackets
+        }
+
+        $startUrl = "http://$HeadsetAddress`:$HeadsetHttpPort/start-test?$(New-QueryString -Params $query)"
+        $startResponse = Invoke-ApiRequest -Uri $startUrl -TimeoutSec 5
+        if ($startResponse.StatusCode -ne 200) {
+            continue
+        }
+
+        if ($safeSettleMs -gt 0) {
+            Start-Sleep -Milliseconds $safeSettleMs
+        }
+
+        $warmupSenderJob = $null
+        try {
+            $warmupSenderJob = Start-RxSenderJob -TargetAddress $HeadsetAddress -TargetPort $profile.Port `
+                -DurationMs $DurationMs -PayloadBytes $profile.PayloadBytes -TargetMbps $profile.TargetMbps
+
+            Wait-Job -Job $warmupSenderJob -Timeout ([int][Math]::Ceiling(($DurationMs / 1000.0) + 5)) | Out-Null
+            Receive-Job -Job $warmupSenderJob -ErrorAction SilentlyContinue | Out-Null
+        }
+        catch {
+        }
+        finally {
+            Stop-RemoteTest -HeadsetAddress $HeadsetAddress -HeadsetHttpPort $HeadsetHttpPort -TestId $warmupTestId
+            if ($null -ne $warmupSenderJob) {
+                try { Stop-Job -Job $warmupSenderJob -Force | Out-Null } catch {}
+                try { Remove-Job -Job $warmupSenderJob -Force | Out-Null } catch {}
+            }
+        }
+    }
+
+    Stop-AllRemoteTests -HeadsetAddress $HeadsetAddress -HeadsetHttpPort $HeadsetHttpPort
+    if ($safeSettleMs -gt 0) {
+        Start-Sleep -Milliseconds $safeSettleMs
+    }
+}
+
 function Build-OutputObject {
     param(
         [Parameter(Mandatory = $true)]
@@ -510,6 +590,10 @@ try {
     }
 
     Stop-AllRemoteTests -HeadsetAddress $HeadsetAddress -HeadsetHttpPort $HeadsetHttpPort
+    if ($EnableRxWarmup) {
+        Invoke-RxWarmup -Profiles $profiles -HeadsetAddress $HeadsetAddress -HeadsetHttpPort $HeadsetHttpPort `
+            -DurationMs $RxWarmupDurationMs -SettleMs $RxWarmupSettleMs
+    }
 
     foreach ($profile in $profiles) {
         $testId = New-TestId -ProfileName $profile.Name -Mode $profile.Mode -Port $profile.Port
@@ -695,7 +779,10 @@ for ($run = 1; $run -le $RunCount; $run++) {
                     $headIP,
                     $pc,
                     $HeadsetHttpPort,
-                    $TestProfiles
+                    $TestProfiles,
+                    $EnableRxWarmup,
+                    $RxWarmupDurationMs,
+                    $RxWarmupSettleMs
                 ) `
                 -JobName ("udp-test-run{0}-{1}-{2}" -f $run,$pc,$headIP)
         }
@@ -865,3 +952,6 @@ for ($run = 1; $run -le $RunCount; $run++) {
 "Finished: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $SummaryLogFile -Encoding utf8 -Append
 Write-Host "Raw log saved to: $RawLogFile"
 Write-Host "Summary log saved to: $SummaryLogFile" 
+
+
+Get-Content -Path $SummaryLogFile
